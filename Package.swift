@@ -25,7 +25,7 @@ let package = Package(
                 dependencies: [
                     .product(name: "Vapor", package: "vapor"),
                     .product(name: "XMLParsing", package: "XMLParsing"),
-                    .product(name: "SWXMLHash", package: "SWXMLHash"),
+                    .product(name: "SWXMLHash", package: "SWXMLHash")
                     ]),
         .testTarget(name: "BraintreeTests", dependencies: ["Braintree"]),
     ]

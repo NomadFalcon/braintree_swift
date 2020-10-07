@@ -31,15 +31,13 @@ public class Http {
     public enum RequestMethod: Int, Codable {
         case delete, get, post, put
     }
-    
-    private var container: Container
+   
     public var configuration: Configuration
     
-    public init (container: Container, configuration: Configuration) {
-        self.container = container
+    public init (configuration: Configuration) {
         self.configuration = configuration
     }
-    
+    /*
     public func _getArray<T: Codable>(_ url: String) throws -> Future<[T]> {
         return try get(url).catchMap { error in
             let errStr = "\(error)"
@@ -217,4 +215,5 @@ public class Http {
             }.resume()
         return promise.futureResult
     }
+ */
 }
