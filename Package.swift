@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "braintree",
+    name: "braintree_swift",
     platforms: [
        .macOS(.v10_15)
     ],
