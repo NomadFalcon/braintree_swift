@@ -7,7 +7,6 @@
 
 import Foundation
 import Vapor
-import XMLParsing
 
 public protocol BraintreeContent: Content {
     static var key: String { get }
