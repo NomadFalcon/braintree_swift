@@ -20,6 +20,7 @@ public class Configuration {
     var merchantId: String?
     var publicKey: String?
     var privateKey: String?
+    var gaphToken: String?
     
     public let logger: Logger
     
@@ -27,35 +28,22 @@ public class Configuration {
     public static var grapthQLApiVersion = "2018-05-21"
     public static var apiVersion = "4"
     
-    public init(environment: BraintreeEnvironment, merchantId: String, publicKey: String, privateKey: String) throws {
+    
+    
+    public init (environment: BraintreeEnvironment, merchantId: String?, publicKey: String?, privateKey: String?){
         self.environment = environment
-        
-        guard merchantId.count > 0 else { throw BraintreeError(.configuration, reason: "merchantId needs to be set") }
         self.merchantId = merchantId
-        
-        guard publicKey.count > 0 else { throw BraintreeError(.configuration, reason: "publicKey needs to be set") }
-        self.publicKey = publicKey
-        
-        guard privateKey.count > 0 else { throw BraintreeError(.configuration, reason: "privateKey needs to be set") }
         self.privateKey = privateKey
+        self.publicKey = publicKey
+        if let priK = privateKey, let pubK = publicKey {
+            let joinedStrings = "\(pubK):\(priK)"
+            let utf8str = joinedStrings.data(using: .utf8)
+
+            self.gaphToken = utf8str?.base64EncodedString(options: Data.Base64EncodingOptions(rawValue: 0))
+        }
+        
         self.logger = Logger()
-    }
-    
-    public init(clientId: String, clientSecret: String) throws {
-        let parser = try CredentialsParser(clientId: clientId, clientSecret: clientSecret)
-        self.environment = parser.environment
-        self.clientId = clientId
-        self.clientSecret = clientSecret
-        self.logger = Logger()
-    }
-    
-    public init(accessToken: String) throws {
-        let parser = try CredentialsParser(accessToken: accessToken)
-        self.environment = parser.environment
-        guard let merchantId = parser.merchantId else { throw BraintreeError(.configuration, reason: "merchantId cannot be nil") }
-        self.merchantId = merchantId
-        self.accessToken = accessToken
-        self.logger = Logger()
+        
     }
     
     public var baseURL: String {
@@ -68,6 +56,6 @@ public class Configuration {
     }
     
     var graphQLURL: String {
-        return environment.graphQLURL
+        return environment.baseURL
     }
 }

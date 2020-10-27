@@ -10,43 +10,26 @@ import Foundation
 class CredentialsParser {
     public var environment: BraintreeEnvironment
     public var merchantId: String?
-    public var clientId: String?
-    public var clientSecret: String?
-    public var accessToken: String?
+    public var publicKey: String?
+    public var privateKey: String?
+    public var gaphToken: String?
+   
     
-    public init (clientId: String, clientSecret: String) throws {
-        guard clientId.hasPrefix("client_id") else {
-            throw BraintreeError(.configuration, reason: "Value passed for clientId is not a valid clientId")
+    public init (environment: BraintreeEnvironment, merchantId: String?, publicKey: String?, privateKey: String?){
+        self.environment = environment
+        self.merchantId = merchantId
+        self.privateKey = privateKey
+        self.publicKey = publicKey
+        if let priK = privateKey, let pubK = publicKey {
+            self.gaphToken = createGraphAPIToken(publicKey: pubK,privateKey: priK)
         }
-        guard clientSecret.hasPrefix("client_secret") else {
-            throw BraintreeError(.configuration, reason: "Value passed for clientSecret is not a valid clientSecret")
-        }
-        self.clientId = clientId
-        self.clientSecret = clientSecret
         
-        let clientIdEnvironment = try CredentialsParser.parseEnvironment(clientId)
-        let clientSecretEnvironment = try CredentialsParser.parseEnvironment(clientSecret)
+    }
+    private func createGraphAPIToken(publicKey:String, privateKey:String)->String?{
+        let joinedStrings = "\(publicKey):\(privateKey)"
+        let utf8str = joinedStrings.data(using: .utf8)
+
+        return utf8str?.base64EncodedString(options: Data.Base64EncodingOptions(rawValue: 0))
         
-        guard clientIdEnvironment == clientSecretEnvironment else {
-            throw BraintreeError(.configuration, reason: "Mismatched credential environments: clientId environment is: " + clientIdEnvironment.rawValue + " and clientSecret environment is: " + clientSecretEnvironment.rawValue)
-        }
-        self.environment = clientIdEnvironment
-    }
-    
-    public init (accessToken: String) throws {
-        guard accessToken.hasPrefix("access_token") else {
-            throw BraintreeError(.configuration, reason: "Value passed for accessToken is not a valid accessToken")
-        }
-        self.merchantId = CredentialsParser.parseMerchantId(accessToken)
-        self.environment = try CredentialsParser.parseEnvironment(accessToken)
-    }
-    
-    private static func parseEnvironment(_ credential: String) throws -> BraintreeEnvironment {
-        let environment = credential.split(separator: "$").map { "\($0)" }[1]
-        return try BraintreeEnvironment.parseEnvironment(environment: environment)
-    }
-    
-    private static func parseMerchantId(_ accessToken: String) -> String {
-        return accessToken.split(separator: "$").map { "\($0)" }[2]
     }
 }

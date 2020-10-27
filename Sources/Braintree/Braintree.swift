@@ -13,7 +13,7 @@ public class Braintree{
     var configuration: Configuration
     
     public init(environment: BraintreeEnvironment, merchantId: String, publicKey: String, privateKey: String) throws {
-        self.configuration = try Configuration(environment: environment,
+        self.configuration =  Configuration(environment: environment,
                                                merchantId: merchantId,
                                                publicKey: publicKey,
                                                privateKey: privateKey)
