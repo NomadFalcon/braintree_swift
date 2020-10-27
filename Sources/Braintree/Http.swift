@@ -36,6 +36,63 @@ public class Http {
     public init (configuration: Configuration) {
         self.configuration = configuration
     }
+    
+     func headers()-> [String: String] {
+        var headers: [String: String] = [:]
+        headers["Braintree-Version"] = Configuration.grapthQLApiVersion
+        headers["User-Agent"] = "Braintree Swift " + Configuration.version
+        headers["X-ApiVersion"] = Configuration.apiVersion
+        headers["Authorization"] =  "Basic " + configuration.gaphToken!
+        headers["Content-Type"] = "application/json"
+        return headers
+    }
+    
+    
+    private func encode<T>(_ payload: T) throws -> Data where T: Codable {
+        let payload = try JSONEncoder().encode(payload)
+        let payloadDict = try JSONSerialization.jsonObject(with: payload, options: .allowFragments)
+        return try JSONSerialization.data(withJSONObject: payloadDict, options: JSONSerialization.WritingOptions.init(rawValue: 0))
+    }
+    
+    
+    
+    
+    public func post<P>(_ url: String, payload: P, eventLoop: EventLoop) throws -> Future<Response> where P: Codable  {
+        let payload = try encode(payload)
+        let request = Request(url: configuration.baseURL + url, method: .POST, headers:  headers(), body: payload)
+        return try send(request, eventLoop: eventLoop).flatMap { (reponse) -> EventLoopFuture<Response> in
+            return eventLoop.makeSucceededFuture(reponse)
+        }
+    }
+    
+    public func send(_ req: Request, eventLoop:EventLoop) throws -> EventLoopFuture<Response> {
+       guard let url = URL(string: req.url) else { throw BraintreeError(BraintreeErrorCase.server, reason: "Wrong URL") }
+       var urlReq = URLRequest(url: url)
+       urlReq.httpMethod = req.method.rawValue
+       urlReq.httpBody = req.body ?? Data()
+       req.headers.forEach { key, val in
+           urlReq.addValue(val, forHTTPHeaderField: key.description)
+       }
+       let promise = eventLoop.makePromise(of: Response.self)
+       let urlSession = URLSession(configuration: .default)
+       urlSession.dataTask(with: urlReq) { data, urlResponse, error in
+           if let error = error {
+               promise.fail(error)
+               return
+           }
+           
+           guard let httpResponse = urlResponse as? HTTPURLResponse else {
+               let error = BraintreeError(BraintreeErrorCase.server, reason: "URLResponse was not a HTTPURLResponse.")
+               promise.fail(error)
+               return
+           }
+           promise.succeed(Response(httpResponse, data: data))
+           }.resume()
+       return promise.futureResult
+   }
+    
+    
+    
     /*
     public func _getArray<T: Codable>(_ url: String) throws -> Future<[T]> {
         return try get(url).catchMap { error in
@@ -123,32 +180,9 @@ public class Http {
         }
     }
     
-    private func encode<T>(_ payload: T) throws -> Data where T: BraintreeContent {
-        let payload = try JSONEncoder().encode(payload)
-        let payloadDict = try JSONSerialization.jsonObject(with: payload, options: .allowFragments)
-        let dict: [String: Any] = [T.key: payloadDict]
-        return try JSONSerialization.data(withJSONObject: dict, options: JSONSerialization.WritingOptions.init(rawValue: 0))
-    }
+   
     
-    private func decode<T>(response: Response) throws -> T where T: Codable {
-        guard let responseData = response.data else {
-            throw BraintreeError(BraintreeErrorCase.server, reason: "Response data cannot be nil")
-        }
-        let result = try XMLDecoder().decode(T.self, from: responseData)
-        print("decoded: \(result)")
-        return result
-    }
     
-    private func headers() throws -> [String: String] {
-        var headers: [String: String] = [:]
-        headers["Accept"] = "application/xml"
-        headers["User-Agent"] = "Braintree Swift " + Configuration.version
-        headers["X-ApiVersion"] = Configuration.apiVersion
-        headers["Authorization"] = try authorizationHeader()
-        headers["Accept-Encoding"] = "gzip"
-        headers["Content-Type"] = "application/json"
-        return headers
-    }
     
     private func authorizationHeader() throws -> String {
         if let accessToken = configuration.accessToken {
@@ -168,51 +202,31 @@ public class Http {
         return "Basic " + base64String.trimmingCharacters(in: .whitespaces)
     }
     
-    struct Request: Codable {
-        var url: String
-        enum Method: String, Codable {
-            case POST, PUT, GET, DELETE
-        }
-        var method: Method
-        var headers: [String: String] = [:]
-        var body: Data?
-    }
     
-    struct Response: Codable {
-        var statusCode: Int
-        var data: Data?
-        
-        init (_ resp: HTTPURLResponse, data: Data?) {
-            self.statusCode = resp.statusCode
-            self.data = data
-        }
-    }
-    
-    //TODO: use standard Vapor's client instead
-    private func send(_ req: Request) throws -> EventLoopFuture<Response> {
-        guard let url = URL(string: req.url) else { throw BraintreeError(BraintreeErrorCase.server, reason: "Wrong URL") }
-        var urlReq = URLRequest(url: url)
-        urlReq.httpMethod = req.method.rawValue
-        urlReq.httpBody = req.body ?? Data()
-        req.headers.forEach { key, val in
-            urlReq.addValue(val, forHTTPHeaderField: key.description)
-        }
-        let promise = container.eventLoop.newPromise(Response.self)
-        let urlSession = URLSession(configuration: .default)
-        urlSession.dataTask(with: urlReq) { data, urlResponse, error in
-            if let error = error {
-                promise.fail(error: error)
-                return
-            }
-            
-            guard let httpResponse = urlResponse as? HTTPURLResponse else {
-                let error = BraintreeError(BraintreeErrorCase.server, reason: "URLResponse was not a HTTPURLResponse.")
-                promise.fail(error: error)
-                return
-            }
-            promise.succeed(result: Response(httpResponse, data: data))
-            }.resume()
-        return promise.futureResult
-    }
  */
+    
+   
 }
+
+public struct Request: Codable {
+    var url: String
+    enum Method: String, Codable {
+        case POST
+    }
+    var method: Method
+    var headers: [String: String] = [:]
+    var body: Data?
+}
+
+public struct Response: Codable {
+    var statusCode: Int
+    var data: Data?
+    
+    init (_ resp: HTTPURLResponse, data: Data?) {
+        self.statusCode = resp.statusCode
+        self.data = data
+    }
+}
+
+//TODO: use standard Vapor's client instead
+

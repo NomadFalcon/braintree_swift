@@ -102,7 +102,7 @@ extension Application {
         
         public func configurator(_ configuration: Configuration? = nil) -> BraintreeProvider {
                    guard let makeClient = storage.makeClient else {
-                       fatalError("Mailgun not configured, use: app.mailgun.use(.real)")
+                       fatalError("Braintree not configured, use: app.braintree.use(.real)")
                    }
                    
                    return makeClient(app)
